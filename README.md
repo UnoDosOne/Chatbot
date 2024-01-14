@@ -33,4 +33,9 @@ You can install these dependencies by running the following command in your term
 ```bash
 npm install
 
+npm start
+
+
+
+
 
