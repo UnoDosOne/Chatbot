@@ -10,10 +10,10 @@ Before you get started, please ensure that you have the following software insta
 - **Android Studio** (latest version)
 - **Java Development Kit (JDK)** (latest version)
 
-### 📌 Project Version
+# 📌 Project Version
 The current version of the Treense Chatbot App is 1.0.0.
 
-### 🛠️ Installation and Setup
+# 🛠️ Installation and Setup
 To run this project, you will need to install the following dependencies:
 
 # Dependencies
