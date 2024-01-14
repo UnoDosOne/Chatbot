@@ -10,13 +10,13 @@ Before you get started, please ensure that you have the following software insta
 - **Android Studio** (latest version)
 - **Java Development Kit (JDK)** (latest version)
 
-📌 Project Version
+##📌 Project Version
 The current version of the Treense Chatbot App is 1.0.0.
 
-🛠️ Installation and Setup
+##🛠️ Installation and Setup
 To run this project, you will need to install the following dependencies:
 
-Dependencies
+# Dependencies
 @expo/vector-icons version ^13.0.0
 @react-native-picker/picker version 2.4.10
 axios version ^1.6.5
@@ -35,7 +35,7 @@ You can install these dependencies by running the following command in your term
 
 npm install
 
-🚀 Running the App
+###🚀 Running the App
 After installing the dependencies, you can start the app by running:
 
 npm start
