@@ -1,3 +1,27 @@
+# 🚀 Treense Chatbot App
+
+Welcome to the Treense Chatbot App, a project built using React Native. This application is designed to provide an interactive chatbot experience.
+
+## 📋 Prerequisites
+
+Before you get started, please ensure that you have the following software installed on your system:
+
+- **Node.js** (latest version)
+- **Android Studio** (latest version)
+- **Java Development Kit (JDK)** (latest version)
+
+You can verify the installation of these software by running the following commands in your terminal:
+
+```bash
+# Check Node.js
+node -v
+
+# Check JDK
+java -version
+
+# Check Android Studio
+studio
+
 # Chatbot
 Treense Chatbot app testing, a React Native project.
 
