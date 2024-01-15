@@ -1,6 +1,6 @@
 import React, { useState, useEffect  } from 'react';
-import { View, Text, KeyboardAvoidingView, Platform, TouchableOpacity } from 'react-native';
-import { GiftedChat } from 'react-native-gifted-chat';
+import { View, Image, Text, KeyboardAvoidingView, Platform, TouchableOpacity } from 'react-native';
+import { GiftedChat, Bubble } from 'react-native-gifted-chat';
 import axios from 'axios';
 import * as ImagePicker from 'expo-image-picker';
 import * as Permissions from 'expo-permissions';
@@ -9,24 +9,37 @@ import { MaterialIcons } from '@expo/vector-icons';
 
 const Chitters = () => {
   const [messages, setMessages] = useState([]);
-  const ROBOFLOW_API_KEY = 'pnHKQq7IhPYTY8LpehFz';
+  const [loading, setLoading] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
 
-
-const introMessage = {
-  _id: 0,
-  text: 'Welcome to Treense! Feel free to upload photos of trees for me to analyse!',
-  createdAt: new Date(),
-  user: {
-    _id: 2,
-    name: 'Treense',
-  },
-};
-
-useEffect(() => {
-  // Set the introductory message when the component mounts
-  setMessages([introMessage]);
-}, []); // Empty dependency array means this effect runs once when the component mounts
-
+  useEffect(() => {
+    // Set the introductory message when the component mounts
+    const delayTime1 = 3000;
+  
+    // Set isTyping to true before the delay
+    setIsTyping(true);
+  
+    // Use setTimeout to delay the execution of the introductory message
+    setTimeout(() => {
+      // Assuming GiftedChat message format for the introductory message
+      const introMessage = {
+        _id: 0,
+        text: 'Welcome to Treense! Feel free to upload photos of trees for me to analyse!',
+        createdAt: new Date(),
+        user: {
+          _id: 2,
+          name: 'Treense', 
+        },
+      };
+  
+      // Set the introductory message after the delay
+      setMessages([introMessage]);
+  
+      // Set isTyping to false after the delay
+      setIsTyping(false);
+    }, delayTime1);
+  }, []);  
+  
   const handleImagePicker = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
@@ -67,59 +80,6 @@ useEffect(() => {
     }
   };
 
-  const sendImageToRoboflow = async (imageUri) => {
-    try {
-      let base64Img = await FileSystem.readAsStringAsync(imageUri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-  
-      base64Img = `data:image/jpg;base64,${base64Img}`;
-  
-      const roboflowResponse = await fetch('https://classify.roboflow.com/treense/1', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded', // Update content type
-        'Authorization': 'Bearer ' + ROBOFLOW_API_KEY,
-      },
-      body: JSON.stringify({ image: base64Img }),
-      });
-  
-      if (!roboflowResponse.ok) {
-        console.error('Request failed:', roboflowResponse.status, roboflowResponse.statusText);
-        const responseBody = await roboflowResponse.json();
-        console.error(responseBody);
-        return;
-      }
-  
-      const responseData = await roboflowResponse.json();
-  
-      // Assuming GiftedChat message format
-      const updatedMessage = {
-        _id: new Date().getTime(),
-        text: 'The tree appears to be healthy.',
-        createdAt: new Date(),
-        user: {
-          _id: 2,
-          name: 'Treense',
-        },
-        image: imageUri,
-        analysis: responseData, // Store analysis results in the message
-      };
-  
-      // Update the state to replace the previous message with updated information
-      setMessages((previousMessages) => {
-        const index = previousMessages.findIndex(message => message.image === imageUri);
-        if (index !== -1) {
-          return [...previousMessages.slice(0, index), updatedMessage, ...previousMessages.slice(index + 1)];
-        } else {
-          return previousMessages;
-        }
-      });
-    } catch (error) {
-      console.error(error);
-    }
-  };  
-
   const handleCamera = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
@@ -134,35 +94,76 @@ useEffect(() => {
         quality: 1,
       });
   
-      if (!result.canceled) {
-        let base64Img = await FileSystem.readAsStringAsync(result.assets[0].uri, {
-          encoding: FileSystem.EncodingType.Base64,
-        });
-  
-        base64Img = base64Img.replace(/^data:image\/[a-z]+;base64,/, "");
-  
-        let roboflowResponse = await axios.post(
-          'https://classify.roboflow.com/treense/1',
-          base64Img,
-          {
-            headers: {
-              'Content-Type': 'application/x-www-form-urlencoded',
-              'Authorization': 'Bearer ' + ROBOFLOW_API_KEY,
-            },
-          }
+      if (!result.canceled && result.assets.length > 0) {
+        // Create a new message with the image URI
+        const newMessage = {
+          _id: new Date().getTime(),
+          image: result.assets[0].uri, // Access the URI within the first asset
+          createdAt: new Date(),
+          user: {
+            _id: 1,
+            name: 'User',
+          },
+        };
+
+        // Update the state to include the new message
+        setMessages((previousMessages) =>
+          GiftedChat.append(previousMessages, newMessage)
         );
+
+        // Now you can send the image to the Roboflow model and update the message later
+        sendImageToRoboflow(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const sendImageToRoboflow = async (imageUri) => {
+    try {
+      // Set isTyping to true before making the API call
+      setIsTyping(true);
   
-        let top = roboflowResponse.data.top;
+      let base64Img = await FileSystem.readAsStringAsync(imageUri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
   
+      base64Img = `data:image/jpg;base64,${base64Img}`;
+  
+      axios({
+        method: 'POST',
+        url: "https://classify.roboflow.com/treense/1?api_key=pnHKQq7IhPYTY8LpehFz",
+        data: base64Img,
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        }
+      }).then((res) => {
+        console.log("Results", res.request._response);
+  
+        const responseData = res.data;
+        const top = responseData.top;
+  
+        // Create a bot message based on the analysis results
         let botMessageText;
         if (top === 'healthy') {
-          botMessageText = 'The tree appears to be healthy.';
+          botMessageText = (
+            <Text>
+              The tree you uploaded appears to be{' '}
+              <Text style={{ color: 'green' }}>healthy</Text>.
+            </Text>
+          );
         } else if (top === 'unhealthy') {
-          botMessageText = 'The tree may be unhealthy.';
+          botMessageText = (
+            <Text>
+              This tree may be in{' '}
+              <Text style={{ color: 'red' }}>unhealthy</Text> condition, please seek expert advice.
+            </Text>
+          );
         } else {
           botMessageText = 'I am not sure about the health of the tree.';
         }
   
+        // Assuming GiftedChat message format for the bot message
         const botMessage = {
           _id: new Date().getTime() + 1,
           text: botMessageText,
@@ -171,15 +172,57 @@ useEffect(() => {
             _id: 2,
             name: 'Treense',
           },
+          image: imageUri,
         };
+  
+        // Update the state to include the bot message
         setMessages((previousMessages) =>
           GiftedChat.append(previousMessages, botMessage)
         );
-      }
+  
+        // Set isTyping to false after the responses are generated
+        setIsTyping(false);
+  
+        // Set a time delay (e.g., 5000 milliseconds or 5 seconds) for the encouragement message
+        const delayTime = 5000;
+  
+        const encouragementMessages = [
+          'Feel free to upload another image for analysis!',
+          'Great job! Want to analyze another tree?',
+          'Thats awesome, care to upload more?',
+        ];
+        // Randomly select an encouragement message
+        const randomEncouragementMessage =
+          encouragementMessages[
+            Math.floor(Math.random() * encouragementMessages.length)
+          ];
+        // Use setTimeout to delay the execution of the encouragement message
+        setIsTyping(true);
+        setTimeout(() => {
+          // Assuming GiftedChat message format for the encouragement message
+          const encourageMessage = {
+            _id: new Date().getTime() + 2,
+            text: randomEncouragementMessage,
+            createdAt: new Date(),
+            user: {
+              _id: 2,
+              name: 'Treense',
+            },
+          };
+          // Update the state to include the encouragement message
+          setMessages((previousMessages) =>
+            GiftedChat.append(previousMessages, encourageMessage)
+          );
+          // Set isTyping to false after the encouragement message is added
+          setIsTyping(false);
+        }, delayTime);
+
+      });
     } catch (error) {
       console.error(error);
     }
   };
+  
 
   const renderInputToolbar = () => {
     return (
@@ -198,6 +241,7 @@ useEffect(() => {
             backgroundColor: "#43D338",
             paddingVertical: 5,
             paddingHorizontal: 90,
+            borderWidth: 2,
             borderRadius: 20,
           }}
           onPress={handleImagePicker}
@@ -211,6 +255,7 @@ useEffect(() => {
             backgroundColor: "#43D338",
             paddingVertical: 5,
             paddingHorizontal: 20,
+            borderWidth: 2,
             borderRadius: 20,
           }}
           onPress={handleCamera}
@@ -225,10 +270,33 @@ useEffect(() => {
     // Customize the avatar for each message
     return (
       <View style={{ marginRight: 5 }}>
-        <MaterialIcons name="android" size={32} color="green" />
+        {/* <MaterialIcons name="android" size={32} color="green" /> */}
+        <Image
+          source={require('../assets/avatar.png')}
+          style={{ width: 32, height: 32, borderRadius: 20, backgroundColor: 'white', }}
+        />
       </View>
     );
   };
+  const renderBubble = (props) => {
+    return (
+      <Bubble
+        {...props}
+        wrapperStyle={{
+          right: {
+            backgroundColor: '#43D338',
+            borderWidth: 1,
+
+          },
+          left: {
+            backgroundColor: '#fff',
+            borderWidth: 1,
+
+          }
+        }}
+      />
+    )
+  }
 
   return (
     <KeyboardAvoidingView
@@ -241,7 +309,6 @@ useEffect(() => {
             flex: 1,
             backgroundColor: '#f5f5f5',
             padding: 10,
-            borderBottomWidth: 1,
             marginTop: 40,
             marginBottom: 5,
           }}
@@ -260,9 +327,17 @@ useEffect(() => {
             messages={messages}
             onSend={(newMessages) => handleSend(newMessages)}
             user={{ _id: 1 }}
+            isTyping={isTyping}
             renderInputToolbar={renderInputToolbar}
+            renderBubble={renderBubble}
             renderAvatar={renderAvatar} // Add this line to use the custom avatar renderer
-            listViewProps={{ style: { width: '100%', backgroundColor: 'grey' } }}
+            listViewProps={{ style: {
+               width: '100%', 
+               backgroundColor: '#EAF2EC', 
+               paddingVertical: 10, 
+               borderWidth: 1,
+               borderRadius:20,
+              } }}
           />
         </View>
       </View>
